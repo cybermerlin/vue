@@ -49,7 +49,12 @@ export class Observer {
 
       const methods = Object.create(value.constructor.prototype)
       methodsToPatch.forEach((m) => {
-        if (methods[m]) methods[m] = arrayMethods[m]
+        if (methods[m]) {
+          Object.defineProperty(methods, m, {
+            value: arrayMethods[m],
+            enumerable: false
+          })
+        }
       })
       augment(value, methods, Object.getOwnPropertyNames(methods))
       this.observeArray(value)
