@@ -875,7 +875,16 @@ var Observer = function Observer (value) {
     var augment = hasProto
       ? protoAugment
       : copyAugment;
-    augment(value, arrayMethods, arrayKeys);
+
+    const methods = Object.create(value.constructor.prototype)
+    methodsToPatch.forEach((m) => {
+      if (methods[m])
+        Object.defineProperty(methods, m, {
+          value: arrayMethods[m],
+          enumerable: false
+        })
+    })
+    augment(value, methods, Object.getOwnPropertyNames(methods))
     this.observeArray(value);
   } else {
     this.walk(value);
