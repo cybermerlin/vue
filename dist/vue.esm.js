@@ -867,31 +867,34 @@ var methodsToPatch = [
 /**
  * Intercept mutating methods and emit events
  */
-methodsToPatch.forEach(function (method) {
-  // cache original method
-  var original = arrayProto[method];
-  def(arrayMethods, method, function mutator () {
-    var args = [], len = arguments.length;
-    while ( len-- ) args[ len ] = arguments[ len ];
+function patchArrayMethods(arrayProto, arrayMethods){
+  methodsToPatch.forEach(function (method) {
+    // cache original method
+    var original = arrayProto[method];
+    def(arrayMethods, method, function mutator () {
+      var args = [], len = arguments.length;
+      while ( len-- ) args[ len ] = arguments[ len ];
 
-    var result = original.apply(this, args);
-    var ob = this.__ob__;
-    var inserted;
-    switch (method) {
-      case 'push':
-      case 'unshift':
-        inserted = args;
-        break
-      case 'splice':
-        inserted = args.slice(2);
-        break
-    }
-    if (inserted) { ob.observeArray(inserted); }
-    // notify change
-    ob.dep.notify();
-    return result
+      var result = original.apply(this, args);
+      var ob = this.__ob__;
+      var inserted;
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break
+        case 'splice':
+          inserted = args.slice(2);
+          break
+      }
+      if (inserted) { ob.observeArray(inserted); }
+      // notify change
+      ob.dep.notify();
+      return result
+    });
   });
-});
+}
+patchArrayMethods(arrayProto, arrayMethods);
 
 /*  */
 
@@ -919,10 +922,14 @@ var Observer = function Observer (value) {
   this.vmCount = 0;
   def(value, '__ob__', this);
   if (Array.isArray(value)) {
+    var _protoOfValue = value.constructor.prototype,
+        _methods = Object.create(_protoOfValue);
+    patchArrayMethods(_protoOfValue, _methods);
+
     if (hasProto) {
-      protoAugment(value, arrayMethods);
+      protoAugment(value, _methods);
     } else {
-      copyAugment(value, arrayMethods, arrayKeys);
+      copyAugment(value, _methods, Object.getOwnPropertyNames(_methods));
     }
     this.observeArray(value);
   } else {
